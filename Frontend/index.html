@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Airfoil Self-Noise Predictor</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8f9fa;
+      color: #2d3748;
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .dashboard-container {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 24px 32px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header-content h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .header-content p {
+      margin: 4px 0 0 0;
+      font-size: 14px;
+      opacity: 0.95;
+      font-weight: 400;
+    }
+
+    .header-nav {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    /* Main Layout */
+    .main-layout {
+      display: flex;
+      flex: 1;
+      gap: 24px;
+      padding: 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 320px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      margin-bottom: 20px;
+    }
+
+    .sidebar-section h3 {
+      margin: 0 0 20px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a202c;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #4a5568;
+      margin-bottom: 6px;
+    }
+
+    .form-group select,
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      background: white;
+      color: #667eea;
+      border: 1px solid #667eea;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn-secondary:hover {
+      background: #f7fafc;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .content-section {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      margin-bottom: 24px;
+    }
+
+    .content-section h2 {
+      margin: 0 0 24px 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a202c;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Metric Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    .metric-card .metric-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .metric-card .metric-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #667eea;
+      margin: 0;
+    }
+
+    .metric-card .info-icon {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 16px;
+      height: 16px;
+      background: #cbd5e0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: white;
+      cursor: help;
+    }
+
+    /* Chart Areas */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .chart-container {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chart-container canvas {
+      background: white;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 100%;
+      height: 240px;
+      max-height: 360px;
+      display: block;
+      box-sizing: border-box;
+    }
+
+    .chart-container .chart-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #718096;
+      margin-top: 10px;
+    }
+
+    /* Prediction Result */
+    .prediction-result {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .prediction-result h3 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 500;
+      opacity: 0.95;
+    }
+
+    .prediction-result .result-value {
+      font-size: 48px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .prediction-result .result-unit {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-top: 8px;
+    }
+
+    /* Make sure canvases are visible */
+    .chart-container {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .chart-container canvas {
+      background: white;
+      border-radius: 6px;
+      max-width: 100%;
+      height: 240px;
+      flex: 1;
+      border: 1px solid #d1d5db;
+    }
+
+    .chart-container .chart-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-top: 10px;
+      padding: 5px;
+      background: #f7fafc;
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    /* Footer */
+    .footer {
+      background: white;
+      border-top: 1px solid #e2e8f0;
+      padding: 24px 32px;
+      text-align: center;
+      margin-top: auto;
+    }
+
+    .footer p {
+      margin: 4px 0;
+      font-size: 13px;
+      color: #718096;
+    }
+
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .main-layout {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+      }
+
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header {
+        padding: 20px;
+      }
+
+      .header-content h1 {
+        font-size: 22px;
+      }
+
+      .header-nav {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .main-layout {
+        padding: 16px;
+      }
+
+      .content-section {
+        padding: 20px;
+      }
+
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <style>
+    @view-transition {
+      navigation: auto;
+    }
+  </style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <div class="dashboard-container"><!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <h1 id="main-title">Airfoil Self-Noise Predictor</h1>
+        <p id="subtitle">Predict sound pressure from aerodynamic parameters</p>
+      </div>
+      </header><!-- Main Layout -->
+    <div class="main-layout"><!-- Sidebar -->
+      <aside class="sidebar"><!-- Model Controls -->
+        <div class="sidebar-section">
+          <h3 id="model-controls-title">⚙️ Model Controls</h3>
+          <div class="form-group"><label for="model-select">Select Model</label> <select id="model-select">
+              <option value="rf">Random Forest</option>
+              <option value="lr">Linear Regression</option>
+            </select>
+          </div>
+          <div class="form-group"><label for="n-estimators">n_estimators</label> <input type="number" id="n-estimators"
+              value="100" min="10" max="500">
+          </div>
+          <div class="form-group"><label for="max-depth">max_depth</label> <input type="number" id="max-depth"
+              value="10" min="1" max="50">
+          </div><button class="btn-primary">Train Model</button> <button class="btn-secondary">Show Feature
+            Importance</button>
+        </div>
+        <!-- Model Performance (moved here) -->
+        <div class="sidebar-section">
+          <h2 style="margin:0 0 12px 0; font-size:16px;">📊 Model Performance</h2>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="info-icon">i</div>
+              <div class="metric-label">MAE</div>
+              <div class="metric-value">2.34</div>
+            </div>
+            <div class="metric-card">
+              <div class="info-icon">i</div>
+              <div class="metric-label">R² Score</div>
+              <div class="metric-value">0.92</div>
+            </div>
+            <div class="metric-card">
+              <div class="info-icon">i</div>
+              <div class="metric-label">CV Score</div>
+              <div class="metric-value">0.89</div>
+            </div>
+          </div>
+        </div>
+        <!-- New Prediction -->
+        <div class="sidebar-section">
+          <h3 id="new-prediction-title">🎯 New Prediction</h3>
+          <div class="form-group"><label for="frequency">Frequency (Hz)</label> <input type="number" id="frequency"
+              placeholder="e.g., 1000" step="0.1">
+          </div>
+          <div class="form-group"><label for="angle">Angle (degrees)</label> <input type="number" id="angle"
+              placeholder="e.g., 5.5" step="0.1">
+          </div>
+          <div class="form-group"><label for="chord">Chord Length (m)</label> <input type="number" id="chord"
+              placeholder="e.g., 0.3" step="0.01">
+          </div>
+          <div class="form-group"><label for="velocity">Velocity (m/s)</label> <input type="number" id="velocity"
+              placeholder="e.g., 50" step="0.1">
+          </div>
+          <div class="form-group"><label for="thickness">Thickness (m)</label> <input type="number" id="thickness"
+              placeholder="e.g., 0.02" step="0.001">
+          </div><button class="btn-primary">Predict</button>
+        </div>
+      </aside><!-- Main Content -->
+      <main class="main-content">
+        <section class="content-section">
+          <h2>📈 Data Visualizations</h2>
+          <div class="charts-grid">
+            <div class="chart-container">
+              <canvas id="heatmap-canvas"></canvas>
+              <div class="chart-label">Correlation Heatmap</div>
+            </div>
+            <div class="chart-container">
+              <canvas id="histogram-canvas"></canvas>
+              <div class="chart-label">Distribution Histogram</div>
+            </div>
+            <div class="chart-container">
+              <canvas id="scatter-canvas"></canvas>
+              <div class="chart-label">Actual vs Predicted</div>
+            </div>
+            <div class="chart-container">
+              <canvas id="feature-importance-canvas"></canvas>
+              <div class="chart-label">Feature Importance</div>
+            </div>
+          </div>
+        </section><!-- Prediction Results -->
+        <section class="content-section">
+          <h2>🎯 Prediction Results</h2>
+          <div class="prediction-result">
+            <h3>Predicted Sound Pressure Level</h3>
+            <p class="result-value">124.8</p>
+            <p class="result-unit">dB</p>
+          </div>
+        </section>
+      </main>
+    </div><!-- Footer -->
+    <footer class="footer">
+      <p id="dataset-credit"><strong>Dataset:</strong> UCI Machine Learning Repository — Airfoil Self-Noise Dataset</p>
+      <p id="developer-credit">Developed by <strong>Saumya</strong> | Internship Project 2025</p>
+    </footer>
+  </div>
+  <script>
+    // Backend API URL
+    const API_BASE = 'http://localhost:5000';
+
+    // Get DOM elements
+    const trainBtn = document.querySelector('.btn-primary');
+    const predictBtn = document.querySelectorAll('.btn-primary')[1];
+    const featureImportanceBtn = document.querySelectorAll('.btn-secondary')[0];
+
+    // Store chart instances globally
+    let chartHistogram = null;
+    let chartScatter = null;
+    let chartFeat = null;
+    let chartHeat = null;
+
+    // Train Model Button
+    trainBtn.addEventListener('click', async function () {
+      try {
+        console.log('Training model...');
+        const modelType = document.getElementById('model-select').value;
+        const nEstimators = document.getElementById('n-estimators').value;
+        const maxDepth = document.getElementById('max-depth').value;
+
+        const response = await fetch(`${API_BASE}/train`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model_type: modelType,
+            n_estimators: parseInt(nEstimators),
+            max_depth: maxDepth ? parseInt(maxDepth) : null
+          })
+        });
+
+        const result = await response.json();
+        console.log('Training result:', result);
+
+        if (result.status === 'success') {
+          alert('Model trained successfully!');
+          // Update metrics display
+          updateMetrics(result.metrics);
+          // Load and render charts
+          await loadAndRenderCharts();
+        } else {
+          alert('Error: ' + result.message);
+        }
+      } catch (error) {
+        alert('Error training model: ' + error.message);
+        console.error('Training error:', error);
+      }
+    });
+
+    // Predict Button
+    predictBtn.addEventListener('click', async function () {
+      try {
+        const frequency = document.getElementById('frequency').value;
+        const angle = document.getElementById('angle').value;
+        const chord = document.getElementById('chord').value;
+        const velocity = document.getElementById('velocity').value;
+        const thickness = document.getElementById('thickness').value;
+
+        // Validate inputs
+        if (!frequency || !angle || !chord || !velocity || !thickness) {
+          alert('Please fill all input fields');
+          return;
+        }
+
+        const response = await fetch(`${API_BASE}/predict`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            frequency: parseFloat(frequency),
+            angle: parseFloat(angle),
+            chordLength: parseFloat(chord),
+            velocity: parseFloat(velocity),
+            thickness: parseFloat(thickness)
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          // Update prediction display
+          document.querySelector('.result-value').textContent = result.prediction;
+          document.querySelector('.result-unit').textContent = result.units;
+        } else {
+          alert('Prediction error: ' + result.message);
+        }
+      } catch (error) {
+        alert('Error making prediction: ' + error.message);
+      }
+    });
+
+    // Feature Importance Button
+    featureImportanceBtn.addEventListener('click', async function () {
+      try {
+        const response = await fetch(`${API_BASE}/feature-importance`);
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          alert('Feature Importance:\n' +
+            Object.entries(result.feature_importance)
+              .map(([feature, importance]) => `${feature}: ${(importance * 100).toFixed(1)}%`)
+              .join('\n')
+          );
+        } else {
+          alert('Error: ' + result.message);
+        }
+      } catch (error) {
+        alert('Error getting feature importance: ' + error.message);
+      }
+    });
+
+    // Function to update metrics display
+    function updateMetrics(metrics) {
+      console.log('Updating metrics:', metrics);
+      const metricElements = document.querySelectorAll('.metric-value');
+      if (metrics.mae !== undefined) metricElements[0].textContent = metrics.mae;
+      if (metrics.r2_score !== undefined) metricElements[1].textContent = metrics.r2_score;
+      if (metrics.cv_score !== undefined) metricElements[2].textContent = metrics.cv_score;
+    }
+
+    // Function to load and render charts
+    async function loadAndRenderCharts() {
+      try {
+        console.log('Loading chart data from backend...');
+        const response = await fetch(`${API_BASE}/data`);
+        const result = await response.json();
+
+        console.log('Backend data response:', result);
+
+        if (result.status !== 'success' || !result.data) {
+          console.error('No valid data received from backend');
+          // Create placeholder charts to test if charts work at all
+          createPlaceholderCharts();
+          return;
+        }
+
+        const data = result.data;
+        console.log('Chart data:', data);
+
+        // Destroy existing charts
+        destroyCharts();
+
+        // Create charts with actual data
+        createHistogramChart(data);
+        createScatterChart(data);
+        createFeatureImportanceChart(data);
+        createHeatmapChart(data);
+
+        console.log('All charts should be visible now!');
+
+      } catch (error) {
+        console.error('Error loading charts:', error);
+        // Create placeholder charts if real data fails
+        createPlaceholderCharts();
+      }
+    }
+
+    function destroyCharts() {
+      if (chartHistogram) {
+        chartHistogram.destroy();
+        chartHistogram = null;
+      }
+      if (chartScatter) {
+        chartScatter.destroy();
+        chartScatter = null;
+      }
+      if (chartFeat) {
+        chartFeat.destroy();
+        chartFeat = null;
+      }
+      if (chartHeat) {
+        chartHeat.destroy();
+        chartHeat = null;
+      }
+    }
+
+    function createHistogramChart(data) {
+      const ctx = document.getElementById('histogram-canvas').getContext('2d');
+
+      // Use actual target data or create sample data
+      const targetData = data.target && data.target.length > 0 ? data.target :
+        Array.from({ length: 100 }, () => Math.random() * 50 + 100);
+
+      const bins = 15;
+      const hist = Array(bins).fill(0);
+      const min = Math.min(...targetData);
+      const max = Math.max(...targetData);
+      const binSize = (max - min) / bins;
+
+      targetData.forEach(val => {
+        const binIndex = Math.min(bins - 1, Math.floor((val - min) / binSize));
+        hist[binIndex]++;
+      });
+
+      chartHistogram = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: hist.map((_, i) => (min + i * binSize).toFixed(1)),
+          datasets: [{
+            label: 'Sound Pressure Distribution',
+            data: hist,
+            backgroundColor: '#667eea',
+            borderColor: '#5a67d8',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true },
+            title: { display: true, text: 'Target Distribution' }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Frequency'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Sound Pressure (dB)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function createScatterChart(data) {
+      const ctx = document.getElementById('scatter-canvas').getContext('2d');
+
+      // Use actual test/prediction data or create sample data
+      let scatterData;
+      if (data.y_test && data.y_pred && data.y_test.length > 0) {
+        scatterData = data.y_test.map((val, i) => ({ x: val, y: data.y_pred[i] }));
+      } else {
+        scatterData = Array.from({ length: 50 }, () => ({
+          x: Math.random() * 50 + 100,
+          y: Math.random() * 50 + 100
+        }));
+      }
+
+      chartScatter = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Actual vs Predicted',
+            data: scatterData,
+            backgroundColor: '#764ba2',
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: { display: true, text: 'Actual vs Predicted' }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Actual Values' },
+              beginAtZero: false
+            },
+            y: {
+              title: { display: true, text: 'Predicted Values' },
+              beginAtZero: false
+            }
+          }
+        }
+      });
+    }
+
+    function createFeatureImportanceChart(data) {
+      const ctx = document.getElementById('feature-importance-canvas').getContext('2d');
+      const featureNames = data.feature_names || ['Frequency', 'Angle', 'Chord', 'Velocity', 'Thickness'];
+
+      // Create sample feature importance data
+      const importanceData = featureNames.map(() => Math.random() * 0.4 + 0.1);
+
+      chartFeat = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: featureNames,
+          datasets: [{
+            label: 'Feature Importance',
+            data: importanceData,
+            backgroundColor: '#f6ad55',
+            borderColor: '#ed8936',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            title: { display: true, text: 'Feature Importance' }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              max: 1,
+              title: {
+                display: true,
+                text: 'Importance'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function createHeatmapChart(data) {
+      const ctx = document.getElementById('heatmap-canvas').getContext('2d');
+      const featureNames = data.feature_names || ['Freq', 'Angle', 'Chord', 'Vel', 'Thick'];
+
+      // Create sample correlation data
+      const matrixData = [];
+      for (let i = 0; i < featureNames.length; i++) {
+        for (let j = 0; j < featureNames.length; j++) {
+          matrixData.push({
+            x: j,
+            y: i,
+            v: i === j ? 1 : Math.random() * 0.8 + 0.1
+          });
+        }
+      }
+
+      chartHeat = new Chart(ctx, {
+        type: 'bubble',
+        data: {
+          datasets: [{
+            label: 'Correlation Matrix',
+            data: matrixData,
+            backgroundColor: matrixData.map(d =>
+              `rgba(72, 187, 120, ${d.v})`
+            ),
+            borderColor: '#38a169',
+            borderWidth: 1,
+            radius: matrixData.map(d => d.v * 15 + 5)
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: {
+                callback: function (value) {
+                  return featureNames[value] || '';
+                }
+              },
+              title: { display: true, text: 'Features' }
+            },
+            y: {
+              ticks: {
+                callback: function (value) {
+                  return featureNames[value] || '';
+                }
+              },
+              title: { display: true, text: 'Features' }
+            }
+          },
+          plugins: {
+            title: { display: true, text: 'Feature Correlation Matrix' },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const xFeature = featureNames[context.raw.x];
+                  const yFeature = featureNames[context.raw.y];
+                  return `${xFeature} vs ${yFeature}: ${context.raw.v.toFixed(2)}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function createPlaceholderCharts() {
+      console.log('Creating placeholder charts...');
+      destroyCharts();
+      createHistogramChart({});
+      createScatterChart({});
+      createFeatureImportanceChart({});
+      createHeatmapChart({});
+    }
+
+    // Test if charts work on page load
+    window.addEventListener('load', async function () {
+      console.log('Page loaded, testing charts...');
+
+      try {
+        const response = await fetch(`${API_BASE}/health`);
+        const result = await response.json();
+
+        if (result.status === 'healthy') {
+          console.log('Backend connected successfully');
+
+          // Load model metrics if available
+          const metricsResponse = await fetch(`${API_BASE}/metrics`);
+          const metricsResult = await metricsResponse.json();
+
+          if (metricsResult.status === 'success') {
+            updateMetrics(metricsResult.metrics);
+          }
+
+          // Create placeholder charts immediately to test if they work
+          createPlaceholderCharts();
+        }
+      } catch (error) {
+        console.log('Backend not connected, creating placeholder charts anyway');
+        createPlaceholderCharts();
+      }
+    });
+  </script>
+</body>
+
+</html>
